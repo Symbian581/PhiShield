@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Email Spoofing Detector</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 400px;
+      margin: 30px auto;
+      padding: 0 10px;
+      background: #f5f7fa;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 20px;
+    }
+    input {
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      outline-color: #2980b9;
+    }
+    button {
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      background-color: #2980b9;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #1c5980;
+    }
+    #result {
+      margin-top: 25px;
+      padding: 15px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 18px;
+      text-align: center;
+    }
+    #result.legitimate {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    #result.suspicious {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    #result.loading {
+      background-color: #bee5eb;
+      color: #0c5460;
+      border: 1px solid #abdde5;
+    }
+    #links {
+      margin-top: 15px;
+      display: none;
+      text-align: left;
+    }
+    #links a {
+      color: #2980b9;
+      text-decoration: none;
+    }
+    #links a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <h1>Email Spoofing Detector</h1>
+  <form id="emailForm">
+    <input type="email" id="from" placeholder="From Email Address" required />
+    <input type="email" id="returnPath" placeholder="Return-Path Email Address" required />
+    <button type="submit">Check Email</button>
+  </form>
+  <div id="result" class="loading" style="display:none;"></div>
+  <div id="links" style="display:none;">
+    <h3>Manual Verification Tools:</h3>
+    <ul>
+      <li><a id="spfLink" href="#" target="_blank">Check SPF Record</a></li>
+      <li><a id="dkimLink" href="#" target="_blank">Check DKIM Record</a></li>
+      <li><a id="dmarcLink" href="#" target="_blank">Check DMARC Record</a></li>
+    </ul>
+  </div>
+
+  <script>
+    const form = document.getElementById('emailForm');
+    const resultDiv = document.getElementById('result');
+    const linksDiv = document.getElementById('links');
+    const spfLink = document.getElementById('spfLink');
+    const dkimLink = document.getElementById('dkimLink');
+    const dmarcLink = document.getElementById('dmarcLink');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = 'Checking...';
+      resultDiv.className = 'loading';
+      linksDiv.style.display = 'none'; // Hide links initially
+
+      const from = document.getElementById('from').value.trim();
+      const returnPath = document.getElementById('returnPath').value.trim();
+
+      try {
+        const response = await fetch('/check-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ from, returnPath }),
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          resultDiv.textContent = `Error: ${errData.message || 'Unknown error'}`;
+          resultDiv.className = 'suspicious';
+          return;
+        }
+
+        const data = await response.json();
+        resultDiv.textContent = `${data.result}: ${data.message}`;
+        resultDiv.className = data.result.toLowerCase();
+
+        // Set links for manual verification
+        const domain = from.split('@')[1];
+        spfLink.href = `https://mxtoolbox.com/spf.aspx?domain=${domain}`;
+        dkimLink.href = `https://dkimvalidator.com/?domain=${domain}`;
+        dmarcLink.href = `https://dmarcian.com/dmarc-inspector/?domain=${domain}`;
+        linksDiv.style.display = 'block'; // Show links
+      } catch (error) {
+        resultDiv.textContent = 'Network or server error. Please try again later.';
+        resultDiv.className = 'suspicious';
+      }
+    });
+  </script>
+</body>
+</html>
